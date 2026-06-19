@@ -81,7 +81,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var opts = { isStatic:true, render:{visible:false} };
   // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
   // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
-  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.6 };
+  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.7 };
   M.Composite.add(world, [
     M.Bodies.rectangle(w/2, floorTop + t/2, w, t, floorOpts), // floor (inset; bouncy)
     M.Bodies.rectangle(-t/2, h/2, t, h*2, opts),            // left
@@ -130,10 +130,17 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   function makeBall(level, x, y, pop){
     var def = ballDef(level);
     var body = M.Bodies.circle(x, y, def.radius, {
-      restitution: 0.1, friction: 0.4, frictionStatic: 0.6, density: 0.001, // low -> soft ball-on-ball stacking
+      restitution: 0.1,     // soft ball-on-ball stacking
+      friction: 0.15,       // enough grip to convert spin into rolling
+      frictionStatic: 0.05, // low so balls don't stick where they land
+      frictionAir: 0.004,   // low damping so bounces/rolls carry instead of dying
+      density: 0.001,
     });
     body.plugin = { level: level };
     M.Composite.add(world, body);
+    // Dropped balls get a small random spin; with floor friction this becomes a
+    // roll on landing, so they travel along the bottom instead of landing dead.
+    if (!pop) M.Body.setAngularVelocity(body, (rng() - 0.5) * 0.5);
     if (pop) popScale[body.id] = 0;
     return body;
   }
