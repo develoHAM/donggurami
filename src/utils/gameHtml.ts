@@ -86,6 +86,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
 
   function ballDef(level){ return CFG.balls[level]; }
 
+  var rng = Math.random; // declared before pickSpawn()'s first call below
   var current = pickSpawn();
   var next = pickSpawn();
   var previewX = w/2;
@@ -93,7 +94,6 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var overSince = {}; // bodyId -> timestamp first seen above danger line
   var gameOver = false;
   var popScale = {}; // bodyId -> spawn animation progress 0..1
-  var rng = Math.random;
 
   function pickSpawn(){
     var i = Math.min(CFG.spawnLevels.length-1, Math.floor(rng()*CFG.spawnLevels.length));
