@@ -136,7 +136,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       frictionAir: 0.004,   // low damping so bounces/rolls carry instead of dying
       density: 0.001,
     });
-    body.plugin = { level: level, landed: false };
+    body.plugin = { level: level, landed: pop }; // merged balls (pop) skip the floor roll nudge
     M.Composite.add(world, body);
     if (pop) popScale[body.id] = 0;
     return body;
@@ -155,10 +155,9 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       if (!ball || ball.plugin.landed) continue;
       ball.plugin.landed = true;
       var r = ballDef(ball.plugin.level).radius;
-      var dir = rng() < 0.5 ? -1 : 1;
-      var vx = dir * (3 + rng() * 2); // brisk nudge, magnitude 3..5 (never near zero)
-      M.Body.setVelocity(ball, { x: vx, y: ball.velocity.y });
-      M.Body.setAngularVelocity(ball, vx / r); // v = w*r -> rolls without slipping
+      // Convert the ball's existing horizontal motion into a matching roll (no slip)
+      // so it rolls the way it was already heading — not a random direction.
+      M.Body.setAngularVelocity(ball, ball.velocity.x / r);
     }
   });
 
@@ -207,7 +206,12 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       M.Composite.remove(world, b);
       delete popScale[a.id]; delete popScale[b.id];
       var nextLevel = level + 1;
-      makeBall(nextLevel, mx, my, true);
+      // Conserve momentum so the merge is smooth (no bounce/pop): the new ball
+      // continues with the average velocity of the two equal-mass parents.
+      var avgVx = (a.velocity.x + b.velocity.x) / 2;
+      var avgVy = (a.velocity.y + b.velocity.y) / 2;
+      var merged = makeBall(nextLevel, mx, my, true);
+      M.Body.setVelocity(merged, { x: avgVx, y: avgVy });
       score += ballDef(nextLevel).score;
       send({ type:'merge', level: nextLevel, score: ballDef(nextLevel).score });
       send({ type:'score', value: score });
