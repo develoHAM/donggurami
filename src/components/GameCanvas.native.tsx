@@ -6,7 +6,8 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(
   ({ html, width, height, onEvent, style }, ref) => {
     const webRef = useRef<WebView>(null);
 
-    const run = (cmd: string) => {
+    // cmd is restricted to a literal union so the injected string is never attacker-controlled.
+    const run = (cmd: 'pause' | 'resume' | 'restart') => {
       webRef.current?.injectJavaScript(`window.__suika && window.__suika.${cmd}(); true;`);
     };
 

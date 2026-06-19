@@ -36,6 +36,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(
         title="suika"
         width={width}
         height={height}
+        onLoad={() => send('hello')}
         style={{ border: 'none', background: '#FDF6E3' }}
       />
     );

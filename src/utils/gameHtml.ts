@@ -128,7 +128,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
     previewX = clampX(localX(e), current);
   });
   canvas.addEventListener('pointerup', function(e){
-    if (!canDrop || gameOver) return;
+    if (!canDrop || gameOver || !runner.enabled) return; // ignore drops while paused
     previewX = clampX(localX(e), current);
     makeBall(current, previewX, CFG.dropY, false);
     send({ type:'drop', level: current });
@@ -178,7 +178,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
         if (!overSince[body.id]) overSince[body.id] = now;
         else if (now - overSince[body.id] > 1000){
           gameOver = true;
-          M.Runner.stop(runner);
+          runner.enabled = false;
           send({ type:'gameover', score: score });
           return;
         }
@@ -247,10 +247,16 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       });
       overSince = {}; popScale = {}; score = 0; gameOver = false;
       current = pickSpawn(); next = pickSpawn(); canDrop = true;
-      runner.enabled = true;
-      if (!runner.enabled) {}
-      M.Runner.run(runner, engine);
+      runner.enabled = true; // sole on/off switch; the rAF loop started once at load never stops
       send({ type:'score', value: 0 });
+      send({ type:'next', level: next });
+    },
+    // re-broadcast initial state; the web host calls this on iframe load to
+    // cover the race where the parent attaches its message listener after the
+    // engine's first ready/next have already fired.
+    hello: function(){
+      send({ type:'ready' });
+      send({ type:'score', value: score });
       send({ type:'next', level: next });
     }
   };

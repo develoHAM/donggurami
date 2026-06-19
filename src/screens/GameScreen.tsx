@@ -32,7 +32,7 @@ export function GameScreen() {
   const nextLevel = useGameStore((s) => s.nextLevel);
   const status = useGameStore((s) => s.status);
   const soundEnabled = useGameStore((s) => s.soundEnabled);
-  const { startGame, pauseGame, resumeGame, endGame, setScore, setNext, recordMerge } = useGameStore.getState();
+  const { startGame, pauseGame, resumeGame, endGame, setScore, setNext } = useGameStore.getState();
 
   // Build the canvas document once (with whatever fruit images resolve).
   useEffect(() => {
@@ -59,7 +59,8 @@ export function GameScreen() {
           play('drop');
           break;
         case 'merge':
-          recordMerge(e.score);
+          // The engine's authoritative 'score' event (handled below) is the sole
+          // score writer; 'merge' only drives feedback.
           play('merge');
           if (Platform.OS !== 'web') {
             const strength = e.level >= 7 ? Haptics.ImpactFeedbackStyle.Heavy
@@ -77,7 +78,7 @@ export function GameScreen() {
           break;
       }
     },
-    [recordMerge, setScore, setNext, endGame],
+    [setScore, setNext, endGame],
   );
 
   const handlePause = () => { canvasRef.current?.pause(); pauseGame(); };
