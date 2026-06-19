@@ -81,7 +81,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var opts = { isStatic:true, render:{visible:false} };
   // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
   // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
-  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.7, label: 'floor' };
+  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.5, label: 'floor' };
   M.Composite.add(world, [
     M.Bodies.rectangle(w/2, floorTop + t/2, w, t, floorOpts), // floor (inset; bouncy)
     M.Bodies.rectangle(-t/2, h/2, t, h*2, opts),            // left
@@ -130,9 +130,9 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   function makeBall(level, x, y, pop){
     var def = ballDef(level);
     var body = M.Bodies.circle(x, y, def.radius, {
-      restitution: 0.1,     // soft ball-on-ball stacking
-      friction: 0.15,       // enough grip to convert spin into rolling
-      frictionStatic: 0.05, // low so balls don't stick where they land
+      restitution: 0.25,    // bouncy enough that mismatched balls push apart, not cling
+      friction: 0.05,       // low so balls slide/roll apart instead of sticking
+      frictionStatic: 0.02, // low so they don't lock against each other at rest
       frictionAir: 0.004,   // low damping so bounces/rolls carry instead of dying
       density: 0.001,
     });
@@ -155,7 +155,8 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       if (!ball || ball.plugin.landed) continue;
       ball.plugin.landed = true;
       var r = ballDef(ball.plugin.level).radius;
-      var vx = (rng() - 0.5) * 3; // gentle sideways nudge, +/-1.5
+      var dir = rng() < 0.5 ? -1 : 1;
+      var vx = dir * (3 + rng() * 2); // brisk nudge, magnitude 3..5 (never near zero)
       M.Body.setVelocity(ball, { x: vx, y: ball.velocity.y });
       M.Body.setAngularVelocity(ball, vx / r); // v = w*r -> rolls without slipping
     }
