@@ -79,8 +79,11 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var w = CFG.width, h = CFG.height, t = CFG.wall;
   var floorTop = h - 10;                                    // rest surface, 10px above the bottom border
   var opts = { isStatic:true, render:{visible:false} };
+  // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
+  // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
+  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.6 };
   M.Composite.add(world, [
-    M.Bodies.rectangle(w/2, floorTop + t/2, w, t, opts),    // floor (inset so balls clear the border)
+    M.Bodies.rectangle(w/2, floorTop + t/2, w, t, floorOpts), // floor (inset; bouncy)
     M.Bodies.rectangle(-t/2, h/2, t, h*2, opts),            // left
     M.Bodies.rectangle(w + t/2, h/2, t, h*2, opts),         // right
   ]);
@@ -111,14 +114,23 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var popScale = {}; // bodyId -> spawn animation progress 0..1
 
   function pickSpawn(){
-    var i = Math.min(CFG.spawnLevels.length-1, Math.floor(rng()*CFG.spawnLevels.length));
-    return CFG.spawnLevels[i];
+    // Weighted toward smaller fruits: weight = (count - index), so the smallest
+    // is most likely and the largest spawnable is least. For [0,1,2,3,4] the
+    // weights are 5:4:3:2:1 -> ~33%, 27%, 20%, 13%, 7%.
+    var n = CFG.spawnLevels.length, total = 0, i;
+    for (i=0;i<n;i++) total += (n - i);
+    var roll = rng() * total;
+    for (i=0;i<n;i++){
+      roll -= (n - i);
+      if (roll < 0) return CFG.spawnLevels[i];
+    }
+    return CFG.spawnLevels[n-1];
   }
 
   function makeBall(level, x, y, pop){
     var def = ballDef(level);
     var body = M.Bodies.circle(x, y, def.radius, {
-      restitution: 0.15, friction: 0.4, frictionStatic: 0.6, density: 0.001,
+      restitution: 0.1, friction: 0.4, frictionStatic: 0.6, density: 0.001, // low -> soft ball-on-ball stacking
     });
     body.plugin = { level: level };
     M.Composite.add(world, body);
