@@ -81,7 +81,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var opts = { isStatic:true, render:{visible:false} };
   // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
   // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
-  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.7 };
+  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.7, label: 'floor' };
   M.Composite.add(world, [
     M.Bodies.rectangle(w/2, floorTop + t/2, w, t, floorOpts), // floor (inset; bouncy)
     M.Bodies.rectangle(-t/2, h/2, t, h*2, opts),            // left
@@ -136,14 +136,30 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       frictionAir: 0.004,   // low damping so bounces/rolls carry instead of dying
       density: 0.001,
     });
-    body.plugin = { level: level };
+    body.plugin = { level: level, landed: false };
     M.Composite.add(world, body);
-    // Dropped balls get a small random spin; with floor friction this becomes a
-    // roll on landing, so they travel along the bottom instead of landing dead.
-    if (!pop) M.Body.setAngularVelocity(body, (rng() - 0.5) * 0.5);
     if (pop) popScale[body.id] = 0;
     return body;
   }
+
+  // ---- roll on landing ----
+  // The first time a ball touches the floor, give it a gentle horizontal velocity
+  // and a matching spin (rolling without slip) so it starts rolling on the exact
+  // frame of impact — no mid-air spin, no friction-conversion delay.
+  M.Events.on(engine, 'collisionStart', function(ev){
+    for (var i=0;i<ev.pairs.length;i++){
+      var a = ev.pairs[i].bodyA, b = ev.pairs[i].bodyB;
+      var ball = null;
+      if (a.label === 'floor' && b.plugin && !b.isStatic) ball = b;
+      else if (b.label === 'floor' && a.plugin && !a.isStatic) ball = a;
+      if (!ball || ball.plugin.landed) continue;
+      ball.plugin.landed = true;
+      var r = ballDef(ball.plugin.level).radius;
+      var vx = (rng() - 0.5) * 3; // gentle sideways nudge, +/-1.5
+      M.Body.setVelocity(ball, { x: vx, y: ball.velocity.y });
+      M.Body.setAngularVelocity(ball, vx / r); // v = w*r -> rolls without slipping
+    }
+  });
 
   function clampX(x, level){
     var r = ballDef(level).radius;
