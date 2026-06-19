@@ -136,5 +136,5 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pauseBtn: { backgroundColor: '#fff', borderRadius: 12, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pauseIcon: { fontSize: 18, fontWeight: '900', color: '#5C4033', letterSpacing: 2 },
-  canvasWrap: { borderRadius: 16, overflow: 'hidden', borderWidth: 3, borderColor: '#EADBC8' },
+  canvasWrap: { borderRadius: 8, overflow: 'hidden', borderWidth: 3, borderColor: '#EADBC8' },
 });

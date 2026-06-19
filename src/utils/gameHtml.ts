@@ -12,7 +12,6 @@ export interface GameHtmlOptions {
 
 const WALL = 12;
 const DROP_Y = 46;
-const DANGER_Y = 96;
 
 export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   const width = opts.width ?? 360;
@@ -25,7 +24,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
     height,
     wall: WALL,
     dropY: DROP_Y,
-    dangerY: DANGER_Y,
+    dangerY: Math.round(height * 0.5),
     images: opts.images ?? {},
   };
 
@@ -71,20 +70,35 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
 
   // ---- engine ----
   var engine = M.Engine.create();
-  engine.gravity.y = 1;
+  engine.gravity.y = 0.85; // base falling speed (15% slower than the original 1.0)
   var world = engine.world;
   var runner = M.Runner.create();
   M.Runner.run(runner, engine);
 
   var w = CFG.width, h = CFG.height, t = CFG.wall;
+  var floorTop = h - 10;                                    // rest surface, 10px above the bottom border
   var opts = { isStatic:true, render:{visible:false} };
   M.Composite.add(world, [
-    M.Bodies.rectangle(w/2, h + t/2, w, t, opts),          // floor
-    M.Bodies.rectangle(-t/2, h/2, t, h*2, opts),           // left
-    M.Bodies.rectangle(w + t/2, h/2, t, h*2, opts),        // right
+    M.Bodies.rectangle(w/2, floorTop + t/2, w, t, opts),    // floor (inset so balls clear the border)
+    M.Bodies.rectangle(-t/2, h/2, t, h*2, opts),            // left
+    M.Bodies.rectangle(w + t/2, h/2, t, h*2, opts),         // right
   ]);
 
   function ballDef(level){ return CFG.balls[level]; }
+
+  // ---- falling balls speed up as they near the bottom ----
+  // Extra downward accel scales with depth (0 at top -> +60% at the floor),
+  // applied only to bodies actually moving down so resting stacks stay stable.
+  M.Events.on(engine, 'beforeUpdate', function(){
+    var bodies = M.Composite.allBodies(world);
+    for (var i=0;i<bodies.length;i++){
+      var b = bodies[i];
+      if (b.isStatic || !b.plugin || b.velocity.y <= 0.2) continue;
+      var depth = Math.min(1, Math.max(0, b.position.y / CFG.height));
+      var extra = engine.gravity.y * 0.6 * depth;
+      b.force.y += b.mass * extra * engine.gravity.scale;
+    }
+  });
 
   var rng = Math.random; // declared before pickSpawn()'s first call below
   var current = pickSpawn();
@@ -163,7 +177,11 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
     }
   });
 
-  // ---- game-over watch: a settled body above the danger line for >1s ----
+  // ---- game-over watch: a settled body resting above the 50% danger line ----
+  // A falling ball (not settled) never starts the timer, so balls dropped from
+  // the top don't false-trigger while passing through the line. The timer is only
+  // reset when the ball drops back BELOW the line, so a momentary jitter from a
+  // landing ball above the line doesn't keep restarting the countdown.
   M.Events.on(engine, 'afterUpdate', function(){
     if (gameOver) return;
     var now = engine.timing.timestamp;
@@ -173,17 +191,17 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       if (body.isStatic || !body.plugin) continue;
       var r = ballDef(body.plugin.level).radius;
       var top = body.position.y - r;
-      var settled = body.speed < 0.6;
+      var settled = body.speed < 1.2;
       if (top < CFG.dangerY && settled){
         if (!overSince[body.id]) overSince[body.id] = now;
-        else if (now - overSince[body.id] > 1000){
+        else if (now - overSince[body.id] > 800){
           gameOver = true;
           runner.enabled = false;
           send({ type:'gameover', score: score });
           return;
         }
-      } else {
-        delete overSince[body.id];
+      } else if (top >= CFG.dangerY) {
+        delete overSince[body.id]; // reset only when clearly below the line
       }
     }
   });
