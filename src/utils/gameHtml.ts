@@ -12,6 +12,7 @@ export interface GameHtmlOptions {
 
 const WALL = 12;
 const DROP_Y = 46;
+const DANGER_Y = 96; // danger line near the top of the canvas
 
 export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   const width = opts.width ?? 360;
@@ -24,7 +25,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
     height,
     wall: WALL,
     dropY: DROP_Y,
-    dangerY: Math.round(height * 0.5),
+    dangerY: DANGER_Y,
     images: opts.images ?? {},
   };
 
@@ -177,11 +178,12 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
     }
   });
 
-  // ---- game-over watch: a settled body resting above the 50% danger line ----
-  // A falling ball (not settled) never starts the timer, so balls dropped from
-  // the top don't false-trigger while passing through the line. The timer is only
-  // reset when the ball drops back BELOW the line, so a momentary jitter from a
-  // landing ball above the line doesn't keep restarting the countdown.
+  // ---- game-over watch: a ball is 50%+ over the danger line ----
+  // "50% over" = the ball's CENTER has crossed above the line (half the ball is
+  // above it). A falling ball (not settled) never starts the timer, so balls
+  // dropped from the top don't false-trigger while passing through the line. The
+  // timer only resets when the center drops back below the line, so a momentary
+  // jitter from a landing ball doesn't keep restarting the countdown.
   M.Events.on(engine, 'afterUpdate', function(){
     if (gameOver) return;
     var now = engine.timing.timestamp;
@@ -189,10 +191,9 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
     for (var i=0;i<bodies.length;i++){
       var body = bodies[i];
       if (body.isStatic || !body.plugin) continue;
-      var r = ballDef(body.plugin.level).radius;
-      var top = body.position.y - r;
+      var center = body.position.y; // 50%-over line: center above dangerY
       var settled = body.speed < 1.2;
-      if (top < CFG.dangerY && settled){
+      if (center < CFG.dangerY && settled){
         if (!overSince[body.id]) overSince[body.id] = now;
         else if (now - overSince[body.id] > 800){
           gameOver = true;
@@ -200,8 +201,8 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
           send({ type:'gameover', score: score });
           return;
         }
-      } else if (top >= CFG.dangerY) {
-        delete overSince[body.id]; // reset only when clearly below the line
+      } else if (center >= CFG.dangerY) {
+        delete overSince[body.id]; // reset only when the center is back below the line
       }
     }
   });
