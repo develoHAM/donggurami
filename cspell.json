@@ -12,6 +12,8 @@
     "haptics",
     "Expo",
     "webview",
-    "spawnable"
+    "spawnable",
+    "donggurami",
+    "nojekyll"
   ]
 }

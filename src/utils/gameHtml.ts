@@ -76,17 +76,18 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var runner = M.Runner.create();
   M.Runner.run(runner, engine);
 
-  var w = CFG.width, h = CFG.height, t = CFG.wall;
-  var floorTop = h - 10;                                    // rest surface, 10px above the bottom border
+  var w = CFG.width, h = CFG.height;
+  var inset = 10;            // keep balls this far inside every edge so they rest
+  var floorTop = h - inset;  // clearly within the canvas border (uniform margin)
   var opts = { isStatic:true, render:{visible:false} };
   // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
   // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
   var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.15, label: 'floor' };
   var wt = 80; // thick walls/floor so fast balls in a busy pile can't tunnel out
   M.Composite.add(world, [
-    M.Bodies.rectangle(w/2, floorTop + wt/2, w, wt, floorOpts), // floor: top surface at floorTop, thick downward
-    M.Bodies.rectangle(-wt/2, h/2, wt, h*2, opts),             // left: inner surface at x=0
-    M.Bodies.rectangle(w + wt/2, h/2, wt, h*2, opts),          // right: inner surface at x=w
+    M.Bodies.rectangle(w/2, floorTop + wt/2, w, wt, floorOpts),       // floor: top surface at floorTop
+    M.Bodies.rectangle(inset - wt/2, h/2, wt, h*2, opts),             // left: inner surface at x=inset
+    M.Bodies.rectangle(w - inset + wt/2, h/2, wt, h*2, opts),         // right: inner surface at x=w-inset
   ]);
 
   function ballDef(level){ return CFG.balls[level]; }
@@ -186,7 +187,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
 
   function clampX(x, level){
     var r = ballDef(level).radius;
-    return Math.max(t + r, Math.min(w - t - r, x));
+    return Math.max(inset + r, Math.min(w - inset - r, x));
   }
 
   // ---- input (Pointer Events: mouse + touch, web + native) ----
@@ -305,8 +306,10 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       var body = bodies[i];
       if (body.isStatic || !body.plugin) continue;
       var s = popScale[body.id];
-      if (s != null && s < 1){ s = Math.min(1, s + 0.12); popScale[body.id] = s; }
-      var scale = s==null?1:(0.6 + 0.4*s);
+      if (s != null && s < 1){ s = Math.min(1, s + 0.05); popScale[body.id] = s; } // ~0.33s pop-in (longer, smoother)
+      // ease-out so the grow decelerates into place instead of snapping
+      var eased = s == null ? 1 : 1 - (1 - s) * (1 - s);
+      var scale = s == null ? 1 : (0.45 + 0.55 * eased);
       drawBall(body.plugin.level, body.position.x, body.position.y, body.angle, scale);
     }
     // preview (current ball waiting to drop)
