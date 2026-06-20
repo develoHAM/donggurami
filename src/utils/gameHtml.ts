@@ -82,10 +82,11 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
   // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
   var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.5, label: 'floor' };
+  var wt = 80; // thick walls/floor so fast balls in a busy pile can't tunnel out
   M.Composite.add(world, [
-    M.Bodies.rectangle(w/2, floorTop + t/2, w, t, floorOpts), // floor (inset; bouncy)
-    M.Bodies.rectangle(-t/2, h/2, t, h*2, opts),            // left
-    M.Bodies.rectangle(w + t/2, h/2, t, h*2, opts),         // right
+    M.Bodies.rectangle(w/2, floorTop + wt/2, w, wt, floorOpts), // floor: top surface at floorTop, thick downward
+    M.Bodies.rectangle(-wt/2, h/2, wt, h*2, opts),             // left: inner surface at x=0
+    M.Bodies.rectangle(w + wt/2, h/2, wt, h*2, opts),          // right: inner surface at x=w
   ]);
 
   function ballDef(level){ return CFG.balls[level]; }
@@ -143,21 +144,40 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   }
 
   // ---- roll on landing ----
-  // The first time a ball touches the floor, give it a gentle horizontal velocity
-  // and a matching spin (rolling without slip) so it starts rolling on the exact
-  // frame of impact — no mid-air spin, no friction-conversion delay.
   M.Events.on(engine, 'collisionStart', function(ev){
     for (var i=0;i<ev.pairs.length;i++){
       var a = ev.pairs[i].bodyA, b = ev.pairs[i].bodyB;
+
+      // (a) landing on the floor: convert the ball's existing horizontal motion
+      // into a matching roll (no slip) so it rolls the way it was already heading.
       var ball = null;
       if (a.label === 'floor' && b.plugin && !b.isStatic) ball = b;
       else if (b.label === 'floor' && a.plugin && !a.isStatic) ball = a;
-      if (!ball || ball.plugin.landed) continue;
-      ball.plugin.landed = true;
-      var r = ballDef(ball.plugin.level).radius;
-      // Convert the ball's existing horizontal motion into a matching roll (no slip)
-      // so it rolls the way it was already heading — not a random direction.
-      M.Body.setAngularVelocity(ball, ball.velocity.x / r);
+      if (ball) {
+        if (ball.plugin.landed) continue;
+        ball.plugin.landed = true;
+        var r = ballDef(ball.plugin.level).radius;
+        M.Body.setAngularVelocity(ball, ball.velocity.x / r);
+        continue;
+      }
+
+      // (b) landing on another ball (different level; same level merges instead):
+      // the upper ball gets a small roll down the slope it landed on. The roll
+      // scales with how off-centre it landed — dead-centre stays balanced,
+      // off the shoulder rolls off.
+      if (a.plugin && b.plugin && !a.isStatic && !b.isStatic && a.plugin.level !== b.plugin.level) {
+        var upper = a.position.y < b.position.y ? a : b;
+        var lower = upper === a ? b : a;
+        var dy = lower.position.y - upper.position.y; // >0 => upper is on top
+        var dx = upper.position.x - lower.position.x; // offset = downhill direction
+        if (!upper.plugin.landed && dy > Math.abs(dx)) {
+          upper.plugin.landed = true;
+          var ru = ballDef(upper.plugin.level).radius;
+          var rollV = Math.max(-2, Math.min(2, dx * 0.1)); // small, scales with offset
+          M.Body.setVelocity(upper, { x: upper.velocity.x + rollV, y: upper.velocity.y });
+          M.Body.setAngularVelocity(upper, (upper.velocity.x + rollV) / ru);
+        }
+      }
     }
   });
 
