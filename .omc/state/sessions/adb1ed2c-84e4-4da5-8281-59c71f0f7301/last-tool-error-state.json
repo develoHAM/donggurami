@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"npm run typecheck 2>&1\",\"timeout\":120000,\"description\":\"Run TypeScript type check\"}",
-  "error": "Exit code 2\n\n> suika_tmp@1.0.0 typecheck\n> tsc --noEmit\n\nsrc/__tests__/sanity.test.ts(1,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.\nsrc/__tests__/sanity.test.ts(2,3): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or...",
-  "timestamp": "2026-06-19T11:16:18.353Z",
+  "tool_input_preview": "{\"command\":\"B=dist/_expo/static/js/web/index-*.js && echo \\\"matter present:\\\" && grep -c \\\"Matter.Engine\\\" $B 2>/dev/null; echo \\\"bridge __suika present:\\\" && grep -c \\\"__suika\\\" $B 2>/dev/null; echo ...",
+  "error": "Exit code 2\nmatter present:\nbridge __suika present:\nReactNativeWebView present:\ngameover event present:",
+  "timestamp": "2026-06-19T11:32:52.482Z",
   "retry_count": 1
 }
