@@ -111,7 +111,9 @@ export function GameScreen() {
         </View>
       </View>
 
-      <View style={[styles.canvasWrap, { width: canvasWidth, height: canvasHeight }]}>{canvas}</View>
+      <View style={styles.canvasFrame}>
+        <View style={[styles.canvasWrap, { width: canvasWidth, height: canvasHeight }]}>{canvas}</View>
+      </View>
 
       <PauseModal
         visible={status === 'paused'}
@@ -136,5 +138,8 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   pauseBtn: { backgroundColor: '#fff', borderRadius: 12, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   pauseIcon: { fontSize: 18, fontWeight: '900', color: '#5C4033', letterSpacing: 2 },
-  canvasWrap: { borderRadius: 8, overflow: 'hidden', borderWidth: 3, borderColor: '#EADBC8' },
+  // Tan frame drawn AROUND the canvas (padding), so it never overlaps the play
+  // area — balls rest touching the canvas edge, which is the frame's inner edge.
+  canvasFrame: { backgroundColor: '#EADBC8', borderRadius: 9, padding: 3 },
+  canvasWrap: { borderRadius: 6, overflow: 'hidden' },
 });

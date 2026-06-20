@@ -77,8 +77,8 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   M.Runner.run(runner, engine);
 
   var w = CFG.width, h = CFG.height;
-  var inset = 10;            // keep balls this far inside every edge so they rest
-  var floorTop = h - inset;  // clearly within the canvas border (uniform margin)
+  var inset = 0;             // walls/floor sit at the true canvas edges so balls
+  var floorTop = h - inset;  // rest touching the boundary (frame is drawn around it)
   var opts = { isStatic:true, render:{visible:false} };
   // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
   // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
@@ -306,7 +306,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       var body = bodies[i];
       if (body.isStatic || !body.plugin) continue;
       var s = popScale[body.id];
-      if (s != null && s < 1){ s = Math.min(1, s + 0.05); popScale[body.id] = s; } // ~0.33s pop-in (longer, smoother)
+      if (s != null && s < 1){ s = Math.min(1, s + 0.035); popScale[body.id] = s; } // ~0.5s pop-in (longer, smoother)
       // ease-out so the grow decelerates into place instead of snapping
       var eased = s == null ? 1 : 1 - (1 - s) * (1 - s);
       var scale = s == null ? 1 : (0.45 + 0.55 * eased);
