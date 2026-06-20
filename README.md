@@ -30,8 +30,8 @@ Two GitHub Actions workflows:
 
 - **CI** (`.github/workflows/ci.yml`) — on every push and pull request: typecheck, unit
   tests, and a web build to catch compile errors.
-- **Deploy** (`.github/workflows/deploy.yml`) — on push to `main` and on `v*` tags:
-  builds the web export and publishes it to **GitHub Pages** (free hosting).
+- **Deploy** (`.github/workflows/deploy.yml`) — on push to `main` (or manual
+  dispatch): builds the web export and publishes it to **GitHub Pages** (free hosting).
 
 ### One-time setup to enable the live site
 
@@ -44,4 +44,4 @@ deploy workflow). For a user/org root site (`<user>.github.io`), leave it empty.
 
 ## Versioning
 
-Current release: **v1.0.0**. Tag releases as `vX.Y.Z`; pushing a `v*` tag also triggers a deploy.
+Current release: **v1.0.0**. Tag releases as `vX.Y.Z` to mark them; deploys publish from `main`.
