@@ -11,6 +11,7 @@
     "srcDoc",
     "haptics",
     "Expo",
-    "webview"
+    "webview",
+    "spawnable"
   ]
 }

@@ -81,7 +81,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   var opts = { isStatic:true, render:{visible:false} };
   // Matter uses max(restitutionA, restitutionB) for a pair, so a bouncy floor
   // makes ball->floor hits bounce a lot while ball->ball (both low) stays soft.
-  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.5, label: 'floor' };
+  var floorOpts = { isStatic:true, render:{visible:false}, restitution: 0.15, label: 'floor' };
   var wt = 80; // thick walls/floor so fast balls in a busy pile can't tunnel out
   M.Composite.add(world, [
     M.Bodies.rectangle(w/2, floorTop + wt/2, w, wt, floorOpts), // floor: top surface at floorTop, thick downward
@@ -131,10 +131,10 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
   function makeBall(level, x, y, pop){
     var def = ballDef(level);
     var body = M.Bodies.circle(x, y, def.radius, {
-      restitution: 0.25,    // bouncy enough that mismatched balls push apart, not cling
+      restitution: 0.15,    // low so it barely bounces and rolls instead
       friction: 0.05,       // low so balls slide/roll apart instead of sticking
       frictionStatic: 0.02, // low so they don't lock against each other at rest
-      frictionAir: 0.004,   // low damping so bounces/rolls carry instead of dying
+      frictionAir: 0.012,   // damping so a roll gradually slows and coasts to a stop
       density: 0.001,
     });
     body.plugin = { level: level, landed: pop }; // merged balls (pop) skip the floor roll nudge
@@ -148,8 +148,9 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
     for (var i=0;i<ev.pairs.length;i++){
       var a = ev.pairs[i].bodyA, b = ev.pairs[i].bodyB;
 
-      // (a) landing on the floor: convert the ball's existing horizontal motion
-      // into a matching roll (no slip) so it rolls the way it was already heading.
+      // (a) landing on the floor: start rolling immediately in a random direction.
+      // v = w*r makes it a true roll (no slipping); air friction (frictionAir) then
+      // bleeds the speed off so the roll gradually slows and coasts to a stop.
       var ball = null;
       if (a.label === 'floor' && b.plugin && !b.isStatic) ball = b;
       else if (b.label === 'floor' && a.plugin && !a.isStatic) ball = a;
@@ -157,7 +158,9 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
         if (ball.plugin.landed) continue;
         ball.plugin.landed = true;
         var r = ballDef(ball.plugin.level).radius;
-        M.Body.setAngularVelocity(ball, ball.velocity.x / r);
+        var vx = (rng() < 0.5 ? -1 : 1) * (2 + rng() * 2); // random direction, magnitude 2..4
+        M.Body.setVelocity(ball, { x: vx, y: ball.velocity.y });
+        M.Body.setAngularVelocity(ball, vx / r); // rolling without slipping
         continue;
       }
 
