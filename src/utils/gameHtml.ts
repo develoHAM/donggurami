@@ -306,7 +306,7 @@ export function buildGameHtml(opts: GameHtmlOptions = {}): string {
       var body = bodies[i];
       if (body.isStatic || !body.plugin) continue;
       var s = popScale[body.id];
-      if (s != null && s < 1){ s = Math.min(1, s + 0.035); popScale[body.id] = s; } // ~0.5s pop-in (longer, smoother)
+      if (s != null && s < 1){ s = Math.min(1, s + 0.1); popScale[body.id] = s; } // ~0.17s pop-in
       // ease-out so the grow decelerates into place instead of snapping
       var eased = s == null ? 1 : 1 - (1 - s) * (1 - s);
       var scale = s == null ? 1 : (0.45 + 0.55 * eased);
